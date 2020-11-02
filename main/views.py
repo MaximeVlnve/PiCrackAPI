@@ -32,12 +32,11 @@ def crack_network(request, bssid):
                 network = Network.objects.get(bssid=bssid)
                 serializer = NetworkSerializer(network)
 
-                BASE_DIR = Path(__file__).resolve().parent.parent
-                scripts_dir = os.path.join(BASE_DIR, 'scripts')
-                subprocess.call(scripts_dir + '/test.sh')
-
-                network.status = "pending"
-                network.save()
+                if network.status == 'not_cracked':
+                    network.status = "pending"
+                    network.save()
+                    thread = BruteForceThread(network)
+                    thread.start()
 
                 return Response(serializer.data, status=status.HTTP_200_OK)
 
