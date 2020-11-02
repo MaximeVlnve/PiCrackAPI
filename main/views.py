@@ -24,15 +24,22 @@ def crack_network(request, bssid):
     """
     if request.method == 'GET':
         try:
-            network = Network.objects.get(bssid=bssid)
-            print("\n\n\nOn est laaaaaaa : bssid = {}".format(bssid))
-            print("On est laaaaaaa : network = {}\n\n\n".format(network))
-            serializer = NetworkSerializer(network)
+            is_server_busy = Network.objects.filter(status="pending").count() > 0
 
-            BASE_DIR = Path(__file__).resolve().parent.parent
-            scripts_dir = os.path.join(BASE_DIR, 'scripts')
-            subprocess.call(scripts_dir + '/test.sh')
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            if is_server_busy:
+                return Response("Our server is already busy", status=status.HTTP_400_BAD_REQUEST)
+            else:
+                network = Network.objects.get(bssid=bssid)
+                serializer = NetworkSerializer(network)
+
+                BASE_DIR = Path(__file__).resolve().parent.parent
+                scripts_dir = os.path.join(BASE_DIR, 'scripts')
+                subprocess.call(scripts_dir + '/test.sh')
+
+                network.status = "pending"
+                network.save()
+
+                return Response(serializer.data, status=status.HTTP_200_OK)
 
         except Network.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
